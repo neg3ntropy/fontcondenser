@@ -13,7 +13,8 @@ usage by:
 
 Mandatory screenshot:
 
-.. image:: screenshot.png
+.. image:: https://raw.github.com/soulrebel/fontcondenser/master/screenshot.png
+
 
 Usage example
 +++++++++++++
