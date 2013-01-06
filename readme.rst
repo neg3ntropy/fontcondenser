@@ -30,10 +30,10 @@ there:
 
 arguments:
 
-    horiz ratio    scale horizontally to this ratio
-    spacing ratio  scale gratuitous white space between letters to this ratio
-    scale ratio    scale everything to this ratio
-    font           one or more paths to a font file
+:horiz ratio: scale horizontally to this ratio
+:spacing ratio: scale gratuitous white space between letters to this ratio
+:scale ratio: scale everything to this ratio
+:font: one or more paths to a font file
 
 for example to condense all Ubuntu Mono fonts variants horizontally to 85%, cut
 spacing in half, then enlarge 10%:
