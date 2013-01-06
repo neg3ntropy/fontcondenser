@@ -8,13 +8,17 @@ text in each line (or shorter lines) and read more letters with each eye fixatio
 It just makes most good monospaced font even better for programming or terminal
 usage by:
  
- 1. removing horizontal space between glyphs
- 2. shrinking the glyph horizontally
+ 1. removing gratuitous horizontal space between glyphs, if present
+ 2. shrinking the glyphs horizontally
+ 3. enlarging glyphs but keeping the line height the same
 
 Mandatory screenshot:
 
 .. image:: https://raw.github.com/soulrebel/fontcondenser/master/screenshot.png
 
+What does it mean gratuitous white space? If all relevant letters are actually
+smaller than the allocated width, we have some gratuitous white space, that can
+be slashed hard, without making the glyphs themselves harder to read.
 
 Usage example
 +++++++++++++
@@ -22,12 +26,19 @@ Usage example
 I suggest to clone the repository directly in your ~/.fonts, than use from
 there:
 
-``./condense.sh <xratio> <xclip> <font> [additional fonts]``
+``./monospace_font_condenser.py <horiz ratio> <spacing ratio> <scale ratio> <fonts ...>``
 
-for example to condense the Ubuntu Mono font, in all its variants, to 90% and
-clipping 4 font units use:
+arguments:
 
-``./condense.sh .90 -4 /usr/share/fonts/TTF/UbuntuMono-*``
+    horiz ratio    scale horizontally to this ratio
+    spacing ratio  scale gratuitous white space between letters to this ratio
+    scale ratio    scale everything to this ratio
+    font           one or more paths to a font file
+
+for example to condense all Ubuntu Mono fonts variants horizontally to 85%, cut
+spacing in half, then enlarge 10%:
+
+``./monospace_font_condenser.py .85 .3 1.15 /usr/share/fonts/TTF/UbuntuMono-*``
 
 Good free fonts that can use some condensing are: 
 
@@ -41,12 +52,6 @@ Requirements
 
  * python 2
  * fontforge and its python bindings
-
-Project files
-+++++++++++++
-
- * condense.sh the script to condense many fonts in batch
- * condense_single.py the python code to condense a single font file
 
 License
 +++++++
@@ -74,12 +79,4 @@ Credits
 Originally written by `Andrea Ratto <mailto:andrearatto at yahoo dot it>`_,
 inspired by `Cay Hortsmann
 <http://weblogs.java.net/blog/cayhorstmann/archive/2010/11/22/condensed-monospaced-font>`_.
-
-TODO
-++++
-
- * validate parameters
- * calculate bounding box and reduce intra-font spacing automatically
- * upscale the condensed font to compensate
- * add links and details in documentation
 
