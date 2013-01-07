@@ -32,10 +32,8 @@ import math
 class MonospaceFontCondenser(object):
     "Condense monospace fonts"
 
-    relevant_subset = None
-
     @classmethod
-    def use_relevant_subset(cls):
+    def make_relevant_subset(cls):
         """
         A string of all characters to be used for finding the glyph spacing.
         Glyphs that are wider than those listed here can be shrunk a little more.
@@ -57,42 +55,33 @@ class MonospaceFontCondenser(object):
 
         relevant_chars = u"" + ascii_lower + ascii_upper + ascii_num + symbols + \
                 unicode_extras
-        
-        cls.relevant_subset = [fontforge.nameFromUnicode(ord(c)) for c in relevant_chars]
+        relevant_chars = relevant_chars.replace('W','')
+        relevant_chars = relevant_chars.replace('w','')
+        relevant_subset = [fontforge.nameFromUnicode(ord(c)) for c in relevant_chars]
+        return relevant_subset
 
 
     def __init__(self, input_file):
-        "Open the font in input_file for transformations"
+        "open the font in input_file for transformations"
         self.font = fontforge.open(input_file)
         self.input_file = input_file
 
-    def condense(self, xratio, xspacing_ratio):
+    def condense(self, xratio, xclip):
         """
         processes the font first scaling it horizontally to xratio and then
-        scaling extra whitespace between glyphs to xspacing_ratio.
-
-        For example condense(.80, 0) scales the font to 80% horizontally and
-        clips all unnecessary white, so that the widest letters will touch.
+        clipping extra whitespace between glyphs to xspacing_ratio.
         """
         orig_width = self._get_width()
-        if xspacing_ratio < 1:
-            max_xspacing = self._get_min_horiz_bearing(orig_width, self.relevant_subset)
-            if max_xspacing == 0:
-                print >> sys.stderr, "Warning at least one glyph uses all the width," \
-                        + " cannot reduce whitespace"
-            else:
-                xclip = int(math.ceil(max_xspacing - xspacing_ratio * max_xspacing))
-                print "clipping %d points of extra white space out of %d" % \
-                        (xclip, max_xspacing)
-                self.trim_spacing(xclip, orig_width)
-                orig_width = self._get_width()
+        if xclip > 0:
+            print "clipping %d points" % xclip   
+            self.trim_spacing(xclip)
                 
-        self.horiz_condense(xratio, orig_width)
+        self.horiz_condense(xratio)
         print "condensed from %d to %d" % (orig_width, self._get_width())
 
     def _get_width(self):
         """
-        Gets the width of a monospace font checking that all glyphs are
+        gets the width of a monospace font checking that all glyphs are
         effectively of the same width.
         """
         font_width = None
@@ -111,11 +100,13 @@ class MonospaceFontCondenser(object):
         return font_width
 
 
-    def _get_min_horiz_bearing(self, width, sym_subset=None):
+    def _get_min_horiz_bearing(self, width=None, sym_subset=None):
         """
-        Gets the minimun horizontal bearing found in all glyphs of the font
+        gets the minimun horizontal bearing found in all glyphs of the font
         argument. The bearing is the white space surrounding a glyph. 
         """ 
+        if width is None:
+            width = self._get_width()
         min_bearing = sys.maxint
         min_bearing_sym = None
         for sym in sym_subset or self.font:
@@ -142,21 +133,20 @@ class MonospaceFontCondenser(object):
         if xratio != 1:
             for sym in self.font:
                 glyph = self.font[sym]
-
                 if glyph.width == orig_width: 
                     glyph.transform(psMat.scale(xratio, 1))
 
-    def upscale(self, ratio, orig_width=None):
-        "condense the font horizontally to the given xratio"
+    def scale(self, ratio, orig_width=None):
+        "scale vertically and horizontally to the same ratio"
         if orig_width is None:
             orig_width = self._get_width()
-        if xratio != 1:
+        if ratio != 1:
             for sym in self.font:
                 glyph = self.font[sym]
-
                 if glyph.width == orig_width: 
-                    glyph.transform(psMat.scale(ratio))
+                    glyph.transform(psMat.scale(ratio, ratio))
 
+            
     def trim_spacing(self, xtrim, orig_width=None):
         "trims xtrim points around each glyph of font"
         if orig_width is None:
@@ -183,8 +173,7 @@ class MonospaceFontCondenser(object):
                         xratio = float(glyph_width - to_shrink)/ glyph_width
                         glyph.transform(psMat.scale(xratio, 1))
 
-    def vert_stretch(self, yratio):
-        pass
+
 
     @staticmethod
     def _rename(name, sep, suffix):
@@ -205,48 +194,73 @@ class MonospaceFontCondenser(object):
             os.path.basename(self.input_file))[0])
         self.font.generate(os.path.join(path, outputfont))
 
+    def is_italic(self):
+        return self.font.italicangle != 0
 
 if __name__ == '__main__':
     
-    MonospaceFontCondenser.use_relevant_subset()
-    
+    relevant_subset = MonospaceFontCondenser.make_relevant_subset()
+    print "considering %d relevant symbols" % len(relevant_subset)
+
+    def find_xclip(xspacing_ratio, condensers):
+        min_bearing = sys.maxint
+        for condenser in condensers:
+            if not condenser.is_italic():
+                bearing = condenser._get_min_horiz_bearing(sym_subset=relevant_subset)
+                min_bearing = min(bearing, min_bearing)
+                if bearing == 0:
+                    print >> sys.stderr, "Warning at least one glyph uses all the width," \
+                            + " cannot reduce whitespace"
+                    break
+            else:
+                print "skipping italic font"    
+               
+        xclip = int(math.ceil(min_bearing - xspacing_ratio * min_bearing))
+        return xclip
+
     if len(sys.argv) < 4:
         usage = \
 """
 Usage: 
-%s <horiz ratio> <spacing ratio> <scale ratio> <fonts ...>
+%s <ratio> <spacing ratio> <horiz ratio> <fonts ...>
 
 arguments
-    horiz ratio    scale horizontally to this ratio
-    spacing ratio  scale gratuitous white space between letters to this ratio
-    scale ratio    scale everything to this ratio
-    font           one or more paths to a font file
+    ratio         scale everything to this ratio
+    spacing ratio scale gratuitous white space between letters to this ratio
+    horiz ratio   scale horizontally to this ratio
+    font          one or more paths to the font files that make up a font family
 
 example:
-    scale all Ubuntu Mono fonts variants horizontally 85%%, cut spacing in half,
-    then enlarge 10%%
+    enlarge all Ubuntu Mono fonts variants 15%%, then cut spacing to 30%%,
+    then condense horizontally to 85%%
 
-    %s .90 .5 1.1 /usr/share/fonts/TTF/UbuntuMono-*
+    %s 1.15 .3 .85 /usr/share/fonts/TTF/UbuntuMono-*
 """ % (sys.argv[0], sys.argv[0])
 
         print >> sys.stderr, usage         
         sys.exit(1)
 
-    xratio = float(sys.argv[1])
+    ratio = float(sys.argv[1])
     xspacing_ratio = float(sys.argv[2])
-    upscale_ratio = float(sys.argv[3])
+    xratio = float(sys.argv[3])
 
     total = len(sys.argv) - 4
     print "%d fonts to process" % total
     
     errors = []
 
+    condensers = []
     for input_file in sys.argv[4:]:
+        print "opening font:", input_file
+        condensers.append(MonospaceFontCondenser(input_file))
+
+    xclip = find_xclip(xspacing_ratio, condensers)
+    print "clipping %d points of gratuitous spacing" % xclip
+
+    for condenser in condensers:
         try:
-            print "opening font:", input_file
-            condenser = MonospaceFontCondenser(input_file)
-            condenser.condense(xratio, xspacing_ratio)
-            condenser.upscale(upscale_ratio)
+            condenser.scale(ratio)
+            condenser.condense(xratio, xclip)
             condenser.update_font_name()
             condenser.save()
             print "font saved"

@@ -26,19 +26,19 @@ Usage example
 I suggest to clone the repository directly in your ~/.fonts, than use from
 there:
 
-``./monospace_font_condenser.py <horiz ratio> <spacing ratio> <scale ratio> <fonts ...>``
+``./monospace_font_condenser.py <ratio> <spacing ratio> <horiz ratio> <fonts ...>``
 
-arguments:
+Arguments:
 
-:horiz ratio: scale horizontally to this ratio
+:ratio: scale everything to this ratio
 :spacing ratio: scale gratuitous white space between letters to this ratio
-:scale ratio: scale everything to this ratio
-:font: one or more paths to a font file
+:horiz ratio: scale horizontally to this ratio
+:font: one or more paths to the font files that make up a font family
 
-for example to condense all Ubuntu Mono fonts variants horizontally to 85%, cut
-spacing in half, then enlarge 10%:
+Example: enlarge all Ubuntu Mono fonts variants 15%, then cut spacing to 30%,
+then condense horizontally to 85%:
 
-``./monospace_font_condenser.py .85 .3 1.15 /usr/share/fonts/TTF/UbuntuMono-*``
+``./monospace_font_condenser.py 1.15 .3 .85 /usr/share/fonts/TTF/UbuntuMono-*``
 
 Good free fonts that can use some condensing are: 
 
